@@ -1,0 +1,123 @@
+{
+  "uid": "mini-ufa-capacity",
+  "title": "mini-UFA · Capacidade por região e pool",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "CPU usada por região (cores)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (label_region) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[1m]) * on(node) group_left(label_region) max by (node, label_region) (kube_node_labels{label_region!=\"\"}))",
+          "legendFormat": "região {{label_region}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usada por pool (cores)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (label_pool) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[1m]) * on(node) group_left(label_pool) max by (node, label_pool) (kube_node_labels{label_pool!=\"\"}))",
+          "legendFormat": "pool {{label_pool}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU reservada por pool (requests ÷ alocável)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (label_pool) (kube_pod_container_resource_requests{resource=\"cpu\"} * on(node) group_left(label_pool) max by (node, label_pool) (kube_node_labels{label_pool!=\"\"})) / sum by (label_pool) (kube_node_status_allocatable{resource=\"cpu\"} * on(node) group_left(label_pool) max by (node, label_pool) (kube_node_labels{label_pool!=\"\"}))",
+          "legendFormat": "pool {{label_pool}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usada ÷ alocável por região",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (label_region) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[1m]) * on(node) group_left(label_region) max by (node, label_region) (kube_node_labels{label_region!=\"\"})) / sum by (label_region) (kube_node_status_allocatable{resource=\"cpu\"} * on(node) group_left(label_region) max by (node, label_region) (kube_node_labels{label_region!=\"\"}))",
+          "legendFormat": "região {{label_region}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "tags": [
+    "mini-ufa"
+  ]
+}

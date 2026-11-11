@@ -1,0 +1,23 @@
+# kube-prometheus-stack trimmed for a laptop.
+alertmanager:
+  enabled: false
+kube-state-metrics:
+  # The node labels the dashboards group by (kube_node_labels{label_region, label_pool}).
+  metricLabelsAllowlist:
+    - nodes=[region,pool]
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    scrapeInterval: 15s
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+    nodeSelector: { pool: batch }
+grafana:
+  adminPassword: mini-ufa
+  nodeSelector: { pool: batch }
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+prometheusOperator:
+  nodeSelector: { pool: batch }
