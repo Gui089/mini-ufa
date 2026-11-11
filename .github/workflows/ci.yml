@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kubernetes manifests are valid
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary deploy/sandbox deploy/load
+      - name: Dashboards are valid JSON
+        run: for f in dashboards/*.json; do jq empty "$f"; done
+      - name: k6 scripts parse
+        run: docker run --rm -v "$PWD/drills/k6:/s" grafana/k6:0.54.0 inspect /s/smoke.js > /dev/null
+
+  cluster-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install k3d
+        run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
+      - name: Create the cluster from deploy/k3d/cluster.yaml
+        run: k3d cluster create --config deploy/k3d/cluster.yaml --wait
+      - name: Two nodes per region and two batch nodes
+        run: |
+          kubectl get nodes -L region,pool
+          test "$(kubectl get nodes -l region=a -o name | wc -l)" -eq 2
+          test "$(kubectl get nodes -l region=b -o name | wc -l)" -eq 2
+          test "$(kubectl get nodes -l pool=batch -o name | wc -l)" -eq 2
+      - name: The placeholder workload spreads across both regions
+        run: |
+          kubectl apply -f deploy/sandbox/echo.yaml
+          kubectl -n sandbox rollout status deploy/echo --timeout=180s
+          regions=$(kubectl -n sandbox get pods -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' \
+            | xargs -I{} kubectl get node {} -o jsonpath='{.metadata.labels.region}{"\n"}' | sort -u | wc -l)
+          test "$regions" -eq 2

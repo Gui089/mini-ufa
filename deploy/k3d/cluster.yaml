@@ -1,0 +1,25 @@
+# One server and six agents: two per "region" plus a batch pool that the
+# failover converts into burst capacity.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: mini-ufa
+servers: 1
+agents: 6
+image: rancher/k3s:v1.31.4-k3s1
+# A fixed subnet: Docker's default address pools run out on machines with many networks.
+subnet: "10.77.0.0/16"
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters: [server:*]
+    nodeLabels:
+      - label: region=a
+        nodeFilters: [agent:0, agent:1]
+      - label: region=b
+        nodeFilters: [agent:2, agent:3]
+      - label: pool=steady
+        nodeFilters: [agent:0, agent:1, agent:2, agent:3]
+      - label: pool=batch
+        nodeFilters: [agent:4, agent:5]
