@@ -1,0 +1,44 @@
+# Placeholder workload for phase 0: spread across both regions so the dashboard has CPU to show.
+# Phase 1 replaces it with the four NestJS services.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sandbox
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: sandbox
+spec:
+  replicas: 4
+  selector:
+    matchLabels: { app: echo }
+  template:
+    metadata:
+      labels: { app: echo }
+    spec:
+      nodeSelector: { pool: steady }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: region
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app: echo }
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:1.0
+          args: ["-text=ok", "-listen=:8080"]
+          ports: [{ containerPort: 8080 }]
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: sandbox
+spec:
+  selector: { app: echo }
+  ports: [{ port: 80, targetPort: 8080 }]
